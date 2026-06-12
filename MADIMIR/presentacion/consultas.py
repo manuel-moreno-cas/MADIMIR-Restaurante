@@ -1,11 +1,11 @@
 from tkinter import *
-from datos.almacenamiento import pedidos
+from datos.conexion import conectar
 
 def abrir_consultas():
 
     ventana = Toplevel()
     ventana.title("Consultar Pedidos")
-    ventana.geometry("800x600")
+    ventana.geometry("900x600")
     ventana.configure(bg="#121212")
 
     Label(
@@ -18,7 +18,7 @@ def abrir_consultas():
 
     lista = Listbox(
         ventana,
-        width=90,
+        width=120,
         height=20,
         bg="#1E1E1E",
         fg="white",
@@ -27,18 +27,43 @@ def abrir_consultas():
 
     lista.pack(pady=20)
 
-    if len(pedidos) == 0:
+    try:
 
-        lista.insert(
-            END,
-            "No hay pedidos registrados"
-        )
+        conexion = conectar()
+        cursor = conexion.cursor()
 
-    else:
+        cursor.execute("""
+            SELECT id_pedido,
+                   cliente,
+                   producto,
+                   cantidad,
+                   total
+            FROM pedidos
+        """)
 
-        for p in pedidos:
+        pedidos = cursor.fetchall()
+
+        if len(pedidos) == 0:
 
             lista.insert(
                 END,
-                f"Cliente: {p['cliente']} | Producto: {p['producto']} | Cantidad: {p['cantidad']}"
+                "No hay pedidos registrados"
             )
+
+        else:
+
+            for pedido in pedidos:
+
+                lista.insert(
+                    END,
+                    f"Pedido #{pedido[0]} | Cliente: {pedido[1]} | Producto: {pedido[2]} | Cantidad: {pedido[3]} | Total: ${pedido[4]}"
+                )
+
+        conexion.close()
+
+    except Exception as e:
+
+        lista.insert(
+            END,
+            f"Error al consultar: {e}"
+        )
