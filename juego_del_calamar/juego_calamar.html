@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Juego del Calamar Infotep</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
+
+body{
+  background:#000;
+  color:white;
+  text-align:center;
+}
+
+/* FONDO MÁS NEGRO */
+body::before{
+  content:"";
+  position:fixed;
+  width:100%;
+  height:100%;
+  top:0;
+  left:0;
+
+  background:
+    radial-gradient(circle at 25% 30%, rgba(255,0,85,0.15), transparent 60%),
+    radial-gradient(circle at 75% 70%, rgba(255,0,120,0.10), transparent 60%),
+    linear-gradient(140deg, rgba(0,0,0,0.97), rgba(0,0,0,1));
+
+  z-index:-1;
+}
+
+/* LOGO */
+.logo{
+  position:fixed;
+  top:25px;
+  left:30px;
+  width:90px;
+  z-index:10;
+}
+
+/* TITULO */
+h1{
+  color:#ff0055;
+  margin-top:60px;
+}
+
+/* CRONOMETRO */
+.timer{
+  position:fixed;
+  top:25px;
+  right:30px;
+  background:rgba(0,0,0,0.7);
+  border:2px solid #ff0055;
+  padding:6px 10px;
+  border-radius:10px;
+  font-size:16px;
+  color:#00ff9c;
+  display:none;
+  z-index:10;
+}
+
+/* 🔥 MENSAJE FIJO */
+.start-msg{
+  position:fixed;
+  top:15px;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:20px;
+  color:#00ff9c;
+  background:rgba(0,0,0,0.6);
+  padding:6px 15px;
+  border-radius:10px;
+  border:1px solid #00ff9c;
+  box-shadow:0 0 10px #00ff9c;
+  opacity:0;
+  z-index:10;
+}
+
+/* SE MANTIENE VISIBLE */
+.game-mode .start-msg{
+  opacity:1;
+}
+
+/* BOTONES */
+.controls{
+  margin:10px;
+}
+
+button{
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:bold;
+  margin:5px;
+}
+
+.scan-btn{
+  background:#00ff9c;
+}
+
+.start-btn{
+  background:#ff0055;
+  color:white;
+}
+
+#cameraInput{
+  display:none;
+}
+
+/* TABLERO */
+.board{
+  display:grid;
+  grid-template-columns:repeat(15,1fr);
+  gap:3px;
+  width:96vw;
+  margin:10px auto;
+  padding:8px;
+}
+
+/* BAJA CUADROS */
+.game-mode .board{
+  margin-top:120px;
+}
+
+/* CARTAS */
+.card{
+  aspect-ratio:1/1;
+  border-radius:10px;
+  overflow:hidden;
+  cursor:pointer;
+  position:relative;
+}
+
+.card img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.number{
+  position:absolute;
+  bottom:3px;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:16px;
+  background:rgba(0,0,0,0.6);
+  padding:2px 8px;
+  border-radius:8px;
+  color:#00fff7;
+}
+
+/* ELIMINADO */
+.card.eliminated img{
+  filter:grayscale(100%) brightness(0.2);
+}
+
+.card.eliminated::after{
+  content:"✖";
+  position:absolute;
+  font-size:40px;
+  color:red;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+}
+
+/* EFECTOS */
+.flash{
+  position:fixed;
+  width:100%;
+  height:100%;
+  background:#00ff9c;
+  opacity:0;
+}
+
+.flash.active{
+  animation:flashAnim 0.4s;
+}
+
+@keyframes flashAnim{
+  0%{opacity:0.8;}
+  100%{opacity:0;}
+}
+
+.register-msg{
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-size:30px;
+  color:#00ff9c;
+  opacity:0;
+}
+
+.register-msg.show{
+  animation:showMsg 1s;
+}
+
+@keyframes showMsg{
+  0%{opacity:1;}
+  100%{opacity:0;}
+}
+
+/* MODO JUEGO */
+.game-mode h1,
+.game-mode .controls{
+  display:none;
+}
+</style>
+</head>
+
+<body>
+
+<img src="games_infotep.png" class="logo">
+
+<h1>SQUID GAME INFOTEP</h1>
+
+<div class="timer" id="timer">00:00</div>
+
+<!-- 🔥 TEXTO FIJO -->
+<div class="start-msg" id="startMsg">THE GAME HAS STARTED</div>
+
+<div class="controls">
+  <button class="scan-btn" onclick="openCamera()">📸 SCAN PLAYER</button>
+  <button class="start-btn" onclick="startGame()">START GAME</button>
+</div>
+
+<input type="file" id="cameraInput" accept="image/*" capture="environment">
+
+<div class="board" id="board"></div>
+
+<div class="flash" id="flash"></div>
+<div class="register-msg" id="msg">     PLAYER REGISTERED</div>
+
+<script>
+const board = document.getElementById('board');
+let contador = 1;
+
+/* VOZ */
+function hablar(texto){
+  const msg = new SpeechSynthesisUtterance(texto);
+  msg.lang="en-US";
+  msg.rate=0.65;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(msg);
+}
+
+/* CAMARA */
+function openCamera(){
+  document.getElementById('cameraInput').click();
+}
+
+document.getElementById('cameraInput').addEventListener('change', function(){
+  const file = this.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e){
+
+    if(contador > 100) return;
+
+    const numeroReal = contador;
+    const numeroVisual = String(contador).padStart(3,'0');
+    contador++;
+
+    const card = document.createElement('div');
+    card.className='card';
+
+    card.innerHTML=`
+      <img src="${e.target.result}">
+      <div class="number">${numeroVisual}</div>
+    `;
+
+    card.onclick=()=>{
+      card.classList.toggle('eliminated');
+
+      if(card.classList.contains('eliminated')){
+        hablar("PLAYER " + numeroReal + " ELIMINATED");
+      }
+    };
+
+    board.appendChild(card);
+
+    flashEffect();
+    showMessage();
+    hablar("PLAYER " + numeroReal + " REGISTERED");
+  };
+
+  reader.readAsDataURL(file);
+});
+
+/* EFECTOS */
+function flashEffect(){
+  const flash = document.getElementById('flash');
+  flash.classList.add('active');
+  setTimeout(()=>flash.classList.remove('active'),400);
+}
+
+function showMessage(){
+  const msg = document.getElementById('msg');
+  msg.classList.add('show');
+  setTimeout(()=>msg.classList.remove('show'),1000);
+}
+
+/* TIMER */
+let segundos = 0;
+let corriendo = false;
+
+function actualizarTimer(){
+  let min = String(Math.floor(segundos/60)).padStart(2,'0');
+  let sec = String(segundos%60).padStart(2,'0');
+  document.getElementById("timer").textContent = min+":"+sec;
+}
+
+setInterval(()=>{
+  if(corriendo){
+    segundos++;
+    actualizarTimer();
+  }
+},1000);
+
+const timer = document.getElementById("timer");
+
+timer.onclick = ()=>{ corriendo = !corriendo; };
+timer.ondblclick = ()=>{ segundos = 0; actualizarTimer(); };
+
+/* START */
+function startGame(){
+  document.body.classList.add('game-mode');
+  document.documentElement.requestFullscreen();
+  timer.style.display="block";
+
+  setTimeout(()=>{
+    hablar("THE GAME HAS STARTED");
+  },500);
+}
+</script>
+
+</body>
+</html>

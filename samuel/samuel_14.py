@@ -1,0 +1,1 @@
+# crea un programa para la cimulacion de un semaforo 

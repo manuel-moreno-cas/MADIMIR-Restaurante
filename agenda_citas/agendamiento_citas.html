@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>AR TATTO BARBER</title>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA5J0r1S56KRkucuF5XRoELRWpWDiEY_UU",
+      authDomain: "barber-17545.firebaseapp.com",
+      projectId: "barber-17545",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const horas = [];
+
+    function generarHoras() {
+      function bloque(i, f) {
+        let h = i;
+        while (h < f) {
+          let hora = Math.floor(h);
+          let min = (h % 1) * 60;
+          horas.push((hora<10?'0'+hora:hora)+":"+(min===0?'00':min));
+          h += 0.5;
+        }
+      }
+      bloque(7,12);
+      bloque(14,19);
+
+      const select = document.getElementById('hora');
+      horas.forEach(h=>{
+        let op=document.createElement('option');
+        op.value=h;
+        op.textContent=h;
+        select.appendChild(op);
+      });
+
+      const telGuardado = localStorage.getItem("telefonoCliente");
+      if(telGuardado){
+        document.getElementById("telefono").value = telGuardado;
+      }
+    }
+
+    async function verificarDisponibilidad(fecha, hora){
+      const q = query(collection(db,"citas"), where("fecha","==",fecha), where("hora","==",hora));
+      const res = await getDocs(q);
+      return res.empty;
+    }
+
+    function guardarTelefono(){
+      const tel = document.getElementById('telefonoLogin').value;
+
+      if(!tel){
+        alert("Ingresa tu teléfono");
+        return;
+      }
+
+      localStorage.setItem("telefonoCliente", tel);
+
+      document.getElementById("loginBox").style.display = "none";
+      document.getElementById("appBox").style.display = "block";
+
+      document.getElementById("telefono").value = tel;
+    }
+
+    async function guardarCita(){
+      const nombre = document.getElementById('nombre').value;
+      const telefono = document.getElementById('telefono').value;
+      const fecha = document.getElementById('fecha').value;
+      const hora = document.getElementById('hora').value;
+
+      if(!nombre || !telefono || !fecha || !hora){
+        alert("Completa todo");
+        return;
+      }
+
+      const dia = new Date(fecha).getDay();
+      if(dia === 0){
+        alert("Solo lunes a sábado");
+        return;
+      }
+
+      const disponible = await verificarDisponibilidad(fecha, hora);
+      if(!disponible){
+        alert("Hora ocupada");
+        return;
+      }
+
+      await addDoc(collection(db,"citas"), { nombre, telefono, fecha, hora });
+
+      const mensajeAdmin = `Nueva cita:%0A👤 ${nombre}%0A📞 ${telefono}%0A📅 ${fecha}%0A⏰ ${hora}`;
+      window.open(`https://wa.me/573244097039?text=${mensajeAdmin}`, '_blank');
+
+      window.location.href = `mailto:enriqueigle01@gmail.com.com?subject=Nueva cita barbería&body=${mensajeAdmin}`;
+
+      document.body.innerHTML = `<h1 style='text-align:center;margin-top:50px;'>✅ Registro exitoso</h1>`;
+    }
+
+    window.guardarCita = guardarCita;
+    window.guardarTelefono = guardarTelefono;
+    window.onload = generarHoras;
+  </script>
+
+  <style>
+    body {
+      margin:0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e3a8a, #b91c1c);
+      color:white;
+    }
+
+    .header {
+      text-align:center;
+      margin-top:20px;
+    }
+
+    .logo {
+      width:140px;
+      border-radius:20px;
+      box-shadow: 0 0 20px rgba(255,255,255,0.3);
+    }
+
+    .title {
+      font-size:28px;
+      font-weight:bold;
+      margin-top:10px;
+      color:white;
+      text-shadow: 0 0 10px rgba(255,0,0,0.7);
+    }
+
+    .box{
+      max-width:600px;
+      margin:30px auto;
+      padding:25px;
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(15px);
+      border-radius:20px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    input, select, button{
+      width:100%;
+      padding:12px;
+      margin-top:10px;
+      border-radius:10px;
+      border:none;
+      font-size:14px;
+    }
+
+    input, select{
+      background: rgba(255,255,255,0.15);
+      color:white;
+    }
+
+    input::placeholder{
+      color:#ddd;
+    }
+
+    button{
+      background: linear-gradient(90deg, #2563eb, #dc2626);
+      color:white;
+      font-weight:bold;
+      cursor:pointer;
+      transition:0.3s;
+    }
+
+    button:hover{
+      transform: scale(1.05);
+      background: linear-gradient(90deg, #1d4ed8, #b91c1c);
+    }
+
+    h1{
+      text-align:center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <img src="logo.jpg" class="logo">
+  <div class="title">AR TATTO BARBER</div>
+</div>
+
+<div class="box" id="loginBox">
+  <h1>📱 Ingresa tu teléfono</h1>
+  <input type="tel" id="telefonoLogin" placeholder="Teléfono">
+  <button onclick="guardarTelefono()">Continuar</button>
+</div>
+
+<div class="box" id="appBox" style="display:none;">
+  <h1>💈 AR TATTO BARBER</h1>
+
+  <input type="text" id="nombre" placeholder="Nombre">
+  <input type="tel" id="telefono" placeholder="Teléfono">
+  <input type="date" id="fecha">
+  <select id="hora"></select>
+
+  <button onclick="guardarCita()">Agendar</button>
+
+  <div style="text-align:center;margin-top:20px;">
+    <p>Escanea para agendar</p>
+    <img id="qr" width="150">
+  </div>
+</div>
+
+<script>
+  const qr = document.getElementById('qr');
+  qr.src = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(window.location.href);
+
+  const telGuardado = localStorage.getItem("telefonoCliente");
+  if(telGuardado){
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("appBox").style.display = "block";
+  }
+</script>
+
+</body>
+</html>
