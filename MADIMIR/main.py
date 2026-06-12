@@ -81,7 +81,7 @@ btn_salir.pack(pady=15)
 # Pie de página
 footer = Label(
     ventana,
-    text="Sistema de Gestión de Pedidos",
+    text="Sistema de Gestión de Pedidos MADIMIR",
     font=("Arial", 10),
     fg="gray",
     bg="#121212"
